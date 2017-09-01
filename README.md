@@ -2,7 +2,7 @@
 封装OkHttp3.0
 
 #### 通过服务下载文件,下载完成或失败，自动关闭服务
-1. 首先
+1. 首先,添加相关权限（6.0+需要自己申请读写权限），和服务
 ```
 <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -19,9 +19,9 @@
         <service android:name="com.smallcake.okhttp.SmallDownloadService"/>
     </application>
 ```
-2. 然后
+2. 然后，savePath和saveName可以为null
 ```
-    private void down() {
+
         String downUrl = "https://downpack.baidu.com/appsearch_AndroidPhone_v7.9.3(1.0.64.143)_1012271b.apk";
         String savePath = Environment.getExternalStorageDirectory()+ File.separator + Environment.DIRECTORY_DOWNLOADS+ File.separator;
         String saveName = "百度助手.apk";
@@ -37,5 +37,5 @@
             @Override
             public void failed(IOException e) {L.i(" 下载失败 " + e.getMessage());}
         });
-    }
+    
 ```
