@@ -4,7 +4,7 @@
 #### 通过服务下载文件,下载完成或失败，自动关闭服务
 1. 首先,添加相关权限（6.0+需要自己申请读写权限），和服务
 ```
-<uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS" />
