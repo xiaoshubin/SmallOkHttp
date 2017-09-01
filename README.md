@@ -1,14 +1,13 @@
 # SmallOkHttp
 封装OkHttp3.0
 
-#通过服务下载文件
-1.首先
+# 通过服务下载文件,下载完成或失败，自动关闭服务
+1. 首先
 ```
 <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS" />
-
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
@@ -17,14 +16,10 @@
         android:roundIcon="@mipmap/cake"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
-
-
         <service android:name="com.smallcake.okhttp.SmallDownloadService"/>
-
     </application>
 ```
-2.然后
+2. 然后
 ```
 private static final int RC_WRITE = 0X0002;//获取拍照和读卡权限
     @AfterPermissionGranted(RC_WRITE)
