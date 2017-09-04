@@ -4,9 +4,7 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 
 import com.facebook.stetho.okhttp3.StethoInterceptor;
 
@@ -253,24 +251,6 @@ public class SmallOkHttp implements ISmallOkHttp{
     }
 
     /**
-     * 下载嵌套类
-     */
-    static class DownData{
-        Activity context;
-        String downUrl;
-        String savePath;
-        String saveFileName;
-        DownloadListener listener;
-        public DownData(Activity context, String downUrl, String savePath, String saveFileName, DownloadListener listener) {
-            this.context = context;
-            this.downUrl = downUrl;
-            this.savePath = savePath;
-            this.saveFileName = saveFileName;
-            this.listener = listener;
-        }
-    }
-
-    /**
      * 回调的线程可以用于UI
      * @param context
      * @param downUrl
@@ -278,79 +258,61 @@ public class SmallOkHttp implements ISmallOkHttp{
      * @param saveFileName
      * @param listener
      */
-    public static void downloadUIWithService(Activity context,final String downUrl, final String savePath, final String saveFileName,final DownloadListener listener){
-        downData = new DownData(context,downUrl,savePath,saveFileName,listener);
-        Intent bindIntent = new Intent(context, SmallDownloadService.class);
-        context.bindService(bindIntent, connection, BIND_AUTO_CREATE);
-    }
+    public static void downloadUIWithService(final Activity context, final String downUrl, final String savePath, final String saveFileName, final DownloadListener listener){
 
-    /**
-     * 回调的数据不能用于UI
-     * @param context
-     * @param downUrl
-     * @param savePath
-     * @param saveFileName
-     * @param listener
-     */
-    public static void downloadWithService(Activity context, final String downUrl, final String savePath, final String saveFileName, final DownloadListener listener){
-        downData = new DownData(null,downUrl,savePath,saveFileName,listener);
-        Intent bindIntent = new Intent(context, SmallDownloadService.class);
-        context.bindService(bindIntent, connection, BIND_AUTO_CREATE);
-    }
+         ServiceConnection connection = new ServiceConnection() {
+            @Override
+            public void onServiceDisconnected(ComponentName name) {}
 
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+                SmallDownloadService.MyBinder mBinder = (SmallDownloadService.MyBinder) service;
+                mBinder.startDownload(context, downUrl, savePath, saveFileName, new DownloadListener() {
 
-    private static DownData downData;
-    private static SmallDownloadService.MyBinder mBinder;
-    /**
-     * 建立服务连接
-     */
-    private static ServiceConnection connection = new ServiceConnection() {
-        @Override
-        public void onServiceDisconnected(ComponentName name) {}
+                    int p = 0;
+                    long s = 0;
+                    @Override
+                    public void start(long totalSize) {
+                        listener.start(totalSize);
+                    }
 
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            mBinder = (SmallDownloadService.MyBinder) service;
-            mDownHandler.sendEmptyMessage(0);
-        }
-    };
+                    @Override
+                    public void downloading(int percentage, long currentSize) {
 
-    public static Handler mDownHandler  = new Handler(){
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            switch (msg.what){
-                case 0://开始下载
-                    mBinder.startDownload(downData.context, downData.downUrl, downData.savePath, downData.saveFileName, new DownloadListener() {
-                        @Override
-                        public void start(long totalSize) {
-                            downData.listener.start(totalSize);
-                        }
-
-                        @Override
-                        public void downloading(int percentage, long currentSize) {
-                            downData.listener.downloading(percentage,currentSize);
-                        }
-
-                        @Override
-                        public void successed(String successFileName, String successPath) {
-                            downData.listener.successed(successFileName,successPath);
-                            downData.context.unbindService(connection);
-                        }
-
-                        @Override
-                        public void failed(IOException e) {
-                            downData.listener.failed(e);
-                            downData.context.unbindService(connection);
+                        if (p!=percentage||s!=currentSize){
+                             p = percentage;
+                             s = currentSize;
+                            listener.downloading(p,s);
 
                         }
-                    });
-                    break;
+
+
+                    }
+
+                    @Override
+                    public void successed(String successPath, String successFileName) {
+                        listener.successed(successPath,successFileName);
+                        unBind();
+                    }
+
+                    @Override
+                    public void failed(IOException e) {
+                        listener.failed(e);
+                        unBind();
+
+                    }
+                });
             }
-        }
-    };
 
+            private void unBind(){
+                context.unbindService(this);
 
+            }
+        };
+        Intent bindIntent = new Intent(context, SmallDownloadService.class);
+        context.bindService(bindIntent, connection, BIND_AUTO_CREATE);
+
+    }
 
 
 }
