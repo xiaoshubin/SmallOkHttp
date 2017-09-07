@@ -1,317 +1,336 @@
 package com.smallcake.okhttp;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 
 import com.facebook.stetho.okhttp3.StethoInterceptor;
+import com.smallcake.okhttp.callback.DownloadCallback;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.TreeMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nonnull;
+
+import okhttp3.Cache;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.Response;
 import okhttp3.logging.HttpLoggingInterceptor;
 
 import static android.content.Context.BIND_AUTO_CREATE;
 
+
 /**
  * MyApplication --  com.smallcake.okhttp
  * Created by Small Cake on  2017/8/25 10:42.
- * 基于com.squareup.okhttp3:okhttp的封装，
- * OkHttp使用：http://square.github.io/okhttp/
+ * base com.squareup.okhttp3:okhttp，
+ * Application singleton pattern
+ * OkHttp more info：http://square.github.io/okhttp/
  */
 
-public class SmallOkHttp implements ISmallOkHttp{
-
-    final static String TAG = SmallOkHttp.class.getSimpleName();
-
-    private static volatile  SmallOkHttp instance;
-    private OkHttpClient okHttpClient;
+public class SmallOkHttp implements ISmallOkHttp {
 
 
-    private SmallOkHttp(){
+    private static volatile SmallOkHttp mInstance;
+    private static OkHttpClient okHttpClient;
+
+    /**
+     * default okhttp client
+     * @param context
+     */
+    private SmallOkHttp(Context context) {
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                .cache(new Cache(context.getCacheDir(), MAX_CACHE_SIZE))
                 .readTimeout(READ_TIME_OUT, TimeUnit.MILLISECONDS)
                 .writeTimeout(WRITE_TIME_OUT, TimeUnit.MILLISECONDS)
                 .connectTimeout(CONNECT_TIME_OUT, TimeUnit.MILLISECONDS);
-        if (true){
+        if (BuildConfig.DEBUG) {
             HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
             interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
             builder.addInterceptor(interceptor);
             /**
-             * FaceBook 网络调试器，可在Chrome调试网络请求，查看SharePreferences,数据库等,
-             * 查看方式，在浏览器输入chrome://inspect/
-             * 但需要在自定义的Application中初始化Stetho.initializeWithDefaults(this);
+             * FaceBook network debug，can  on Chrome Brower debug ， look SharePreferences,sqlite data ...
+             * method:input [chrome://inspect/] into brower
+             * but need take init [Stetho.initializeWithDefaults(this)] on yours MyApplication
              */
 
             builder.addNetworkInterceptor(new StethoInterceptor());
         }
         okHttpClient = builder.build();
+
     }
 
+    /**
+     * yours OkHttpClient
+     * @param client
+     */
+    private SmallOkHttp(OkHttpClient client) {
+        this.okHttpClient =client;
 
-    private static SmallOkHttp getInstance() {
-        if (instance == null) {
+    }
+
+    /**
+     * must init on yours MyApplication
+     *
+     * @param application
+     * @return SmallOkHttp
+     */
+    public static SmallOkHttp initClient(@Nonnull Context application) {
+        if (mInstance == null) {
             synchronized (SmallOkHttp.class) {
-                if (instance == null) {
-                    instance = new SmallOkHttp();
+                if (mInstance == null) {
+                    mInstance = new SmallOkHttp(application);
                 }
             }
         }
-        return instance;
+        return mInstance;
+    }
+    /**
+     * must init on yours MyApplication
+     *
+     * @param client
+     * @return SmallOkHttp
+     */
+    public static SmallOkHttp initClient(@Nonnull OkHttpClient client) {
+        if (mInstance == null) {
+            synchronized (SmallOkHttp.class) {
+                if (mInstance == null) {
+                    mInstance = new SmallOkHttp(client);
+                }
+            }
+        }
+        return mInstance;
     }
 
-    private OkHttpClient getOkHttpClient() {
+    public static OkHttpClient getOkHttpClient() {
+        if (okHttpClient == null) throw new NullPointerException("SmallOkHttp must be init On MyApplication");
         return okHttpClient;
     }
 
     /**
-     * 1【POST】【异步】【子线程】【有参】
-     * 没有传入Activity,结果运行在子线程，无法设置数据到View上
-     * 用于service或其他无需界面的线程，如后台数据
+     * 1【POST】【asyn】【sub Threed】【with params】
+     * without Activity,run in sub threed，don't use data into views
+     * may be that you can use with service
+     *
      * @param url
      * @param map
-     * @param listener
+     * @param callback
      */
-    public static void postJson(String url, TreeMap<String, String> map, final CallbackListener listener){
-        postJson(null,url,map,listener);
-    }
-    /**2【POST】【异步】【UI线程】【有参】
-     * 传入了Activity,结果数据可以直接设置在View上
-     * 如：textView.setText(jsonObject.getString("reason"));
-     * 返回的数据都转换为了JSONObject
-     * 这里的参数使用了我们熟悉的TreeMap来代替，它对输入的键值对进行了排序，然后传递给FormBody
-     * @param url
-     * @param map
-     * @param listener
-     */
-    public static void postJson(final Activity context, String url, TreeMap<String, String> map, final CallbackListener listener){
-        FormBody.Builder builder = new FormBody.Builder();
-        for (String key:map.keySet())builder.add(key,map.get(key));
-        RequestBody body = builder.build();
-        Request request = new Request.Builder().url(url).post(body!=null?body:okhttp3.internal.Util.EMPTY_REQUEST).build();
-        getInstance().getOkHttpClient().newCall(request).enqueue(new SmallCallback(context,listener));
-    }
-    /**
-     * 1【GET】【异步】【子线程】【无参】
-     * @param url
-     * @param listener
-     */
-    public static void getJson( String url, final CallbackListener listener){
-        getJson(null,url,null,listener);
-    }
-    /**
-     * 2【GET】【异步】【子线程】【有参】
-     * @param url
-     * @param map
-     * @param listener
-     */
-    public static void getJson( String url, TreeMap<String,String> map, final CallbackListener listener){
-        getJson(null,url,map,listener);
-    }
-    /**
-     * 3【GET】【异步】【UI线程】【无参】
-     * @param url
-     * @param listener
-     */
-    public static void getJson( final Activity context,String url, final CallbackListener listener){
-        getJson(context,url,null,listener);
+    public static void post(String url, Map<String, String> map, Callback callback) {
+        post(null, url, map, callback);
     }
 
     /**
-     * 4【GET】【异步】【UI线程】【有参】
+     * 2【POST】【asyn】【UI Threed】【with params】
+     * with Activity,you can use callback data into views
+     * such as：textView.setText(jsonObject.getString("reason"));
+     * params type is Map<String, String>
+     * return data is JSONObject
      * @param context
      * @param url
      * @param map
-     * @param listener
+     * @param callback
      */
-    public static void getJson(final Activity context, String url, TreeMap<String,String> map, final CallbackListener listener){
-        StringBuffer buffer = new StringBuffer(url+"?");
-        if(map!=null) for (String key:map.keySet()) buffer.append(key).append("=").append(map.get(key)).append("&");
-        String s = buffer.toString();
-        s = s.substring(0,s.length()-1);//去掉最后多于的&
-        Request request = new Request.Builder().url(s).build();
-        getInstance().getOkHttpClient().newCall(request).enqueue(new SmallCallback(context,listener));
+
+    public static void post(final Activity context, String url, Map<String, String> map, final Callback callback) {
+        FormBody.Builder builder = new FormBody.Builder();
+        for (String key : map.keySet()) builder.add(key, map.get(key));
+        RequestBody body = builder.build();
+        Request request = new Request.Builder().url(url).post(body != null ? body : okhttp3.internal.Util.EMPTY_REQUEST).build();
+        getOkHttpClient().newCall(request).enqueue(callback);
     }
 
     /**
-     * 下载文件:6.0+需要动态权限申请
+     * 【GET】【asyn】【sub threed】【no params】
+     *
+     * @param url
+     * @param listener
+     */
+    public static void get(String url, final Callback listener) {
+        get(null, url, listener);
+    }
+
+
+
+
+    /**
+     * 【GET】【asyn】【UI Threed】
+     *
+     * @param context
+     * @param url
+     * @param listener
+     */
+    public static void get(final Activity context, String url, Callback listener) {
+
+        Request request = new Request.Builder().url(url).build();
+        Call call = getOkHttpClient().newCall(request);
+
+
+        if (context.isDestroyed()){
+            call.cancel();
+            return;
+        }
+        call.enqueue(listener);
+
+    }
+
+    /**
+     * 6.0+ need take dynamic permissions
      * <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
      * <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
      * <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS" />
      *
-     * @param downUrl 下载地址
-     * @param savePath 保存文件的路径
-     * @param saveFileName 保存文件的名称
-     * @param listener 下载回调
-     * savePath=null，下载到Download
-     * saveFileName=null,默认取下载文件名称
+     * @param downUrl      download url
+     * if savePath=null，default = Download
+     * if saveFileName=null,default = take name from url
      */
 
-    public static void download(final String downUrl, final String savePath, final String saveFileName, final DownloadListener listener){
+    public static void download(String downUrl,DownloadCallback callback) {
         Request request = new Request.Builder().get().url(downUrl).build();
-        getInstance().getOkHttpClient().newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {//下载失败
-                listener.failed(e);
-            }
+        getOkHttpClient().newCall(request).enqueue(callback);
 
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                long totalSize = response.body().contentLength();
-                listener.start(totalSize);
-                InputStream is = response.body().byteStream();
-                File file = new File(savePath==null?DOWNLOAD_PATH:savePath,saveFileName==null?getDownloadFileName(downUrl):saveFileName);
-                //判断目标文件所在的目录是否存在
-                if (!file.getParentFile().exists())file.getParentFile().mkdirs();
-
-                FileOutputStream fos = new FileOutputStream(file);
-                byte[] buf = new byte[2048];
-                long sum = 0L;
-                int len = 0;
-                while ((len = is.read(buf)) != -1) {
-                    fos.write(buf, 0, len);
-                    sum += len;
-                    int percentage = (int) ((sum * 100) / totalSize);
-                    listener.downloading( percentage,sum);
-                    if (percentage == 100)listener.successed(savePath==null?DOWNLOAD_PATH:savePath,saveFileName==null?getDownloadFileName(downUrl):saveFileName);//下载成功
-                }
-                fos.flush();//必须刷新文件才有内容
-                fos.close();
-                is.close();
-            }
-        });
     }
 
-    public static void downloadUI(final Activity context, final String downUrl, final String savePath, final String saveFileName, final DownloadListener listener){
-        Request request = new Request.Builder().get().url(downUrl).build();
-        getInstance().getOkHttpClient().newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {//下载失败
-                listener.failed(e);
-            }
 
-            @Override
-            public void onResponse(Call call, final Response response) throws IOException {
-                context.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            long totalSize = response.body().contentLength();
-                            listener.start(totalSize);
-                            InputStream is = response.body().byteStream();
-                            File file = new File(savePath==null?DOWNLOAD_PATH:savePath,saveFileName==null?getDownloadFileName(downUrl):saveFileName);
-                            //判断目标文件所在的目录是否存在
-                            if (!file.getParentFile().exists())file.getParentFile().mkdirs();
 
-                            FileOutputStream fos = new FileOutputStream(file);
-                            byte[] buf = new byte[2048];
-                            long sum = 0L;
-                            int len = 0;
-                            while ((len = is.read(buf)) != -1) {
-                                fos.write(buf, 0, len);
-                                sum += len;
-                                int percentage = (int) ((sum * 100) / totalSize);
-                                listener.downloading( percentage,sum);
-                                if (percentage == 100)listener.successed(savePath==null?DOWNLOAD_PATH:savePath,saveFileName==null?getDownloadFileName(downUrl):saveFileName);//下载成功
-                            }
-                            fos.flush();//必须刷新文件才有内容
-                            fos.close();
-                            is.close();
 
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
 
-            }
-        });
-    }
 
     /**
-     * 通过url获取下载文件名称
-     * @param url
-     * @return
-     */
-    private static String getDownloadFileName(String url){
-        return url.substring(url.lastIndexOf("/")+1,url.length());
-    }
-
-    /**
-     * 回调的线程可以用于UI
+     * download callback on UI threed
+     *
      * @param context
      * @param downUrl
      * @param savePath
      * @param saveFileName
-     * @param listener
+     * @param callback
      */
-    public static void downloadUIWithService(final Activity context, final String downUrl, final String savePath, final String saveFileName, final DownloadListener listener){
+    public static void downloadUIWithService(final Activity context, final String downUrl, final String savePath, final String saveFileName, final DownloadCallback callback) {
 
-         ServiceConnection connection = new ServiceConnection() {
+        final  Handler mHandler  = new Handler(){
             @Override
-            public void onServiceDisconnected(ComponentName name) {}
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                switch (msg.what){
+                    case 0:
+                        Bundle data = msg.getData();
+                        long totalSize = data.getLong("totalSize");
+                        callback.onStart(totalSize);
+                        break;
+                    case 1:
+                        Bundle data1 = msg.getData();
+                        int percentage = data1.getInt("percentage");
+                        long currentSize = data1.getLong("currentSize");
+                        callback.onProgress(percentage,currentSize);
+                        break;
+                    case 2:
+                        Bundle data2 = msg.getData();
+                        String successPath = data2.getString("successPath");
+                        String successFileName = data2.getString("successFileName");
+                        callback.onSuccessed(successPath,successFileName);
+                        break;
+                    case -1:
+
+                        break;
+                }
+            }
+        };
+        ServiceConnection connection = new ServiceConnection() {
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+            }
 
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
-                SmallDownloadService.MyBinder mBinder = (SmallDownloadService.MyBinder) service;
-                mBinder.startDownload(context, downUrl, savePath, saveFileName, new DownloadListener() {
 
-                    int p = 0;
-                    long s = 0;
+                SmallDownloadService.MyBinder mBinder = (SmallDownloadService.MyBinder) service;
+                mBinder.startDownload(downUrl, new DownloadCallback(downUrl,savePath,saveFileName) {
+                    int progress;
                     @Override
-                    public void start(long totalSize) {
-                        listener.start(totalSize);
+                    public void onStart(long totalSize) {
+                        progress = 0;
+                        Message message = Message.obtain();
+                        message.what = 0;
+                        Bundle bundle = new Bundle();
+                        bundle.putLong("totalSize",totalSize);
+                        message.setData(bundle);
+                        mHandler.sendMessage(message);
+
                     }
 
                     @Override
-                    public void downloading(int percentage, long currentSize) {
-
-                        if (p!=percentage||s!=currentSize){
-                             p = percentage;
-                             s = currentSize;
-                            listener.downloading(p,s);
-
+                    public void onProgress(int percentage, long currentSize) {
+                        if (progress!=percentage){
+                            progress = percentage;
+                            Message message = Message.obtain();
+                            message.what = 1;
+                            Bundle bundle = new Bundle();
+                            bundle.putInt("percentage",percentage);
+                            bundle.putLong("currentSize",currentSize);
+                            message.setData(bundle);
+                            mHandler.sendMessage(message);
                         }
 
+                    }
+
+                    @Override
+                    public void onSuccessed(String successPath, String successFileName) {
+                        Message message = Message.obtain();
+                        message.what = 2;
+                        Bundle bundle = new Bundle();
+                        bundle.putString("successPath",successPath);
+                        bundle.putString("successFileName",successFileName);
+                        message.setData(bundle);
+                        mHandler.sendMessage(message);
+                        unBind();
 
                     }
 
                     @Override
-                    public void successed(String successPath, String successFileName) {
-                        listener.successed(successPath,successFileName);
+                    public void onFailure(Call call, IOException e) {
+                        super.onFailure(call, e);
+                        Message message = Message.obtain();
+                        message.what = -1;
                         unBind();
-                    }
-
-                    @Override
-                    public void failed(IOException e) {
-                        listener.failed(e);
-                        unBind();
-
                     }
                 });
             }
 
-            private void unBind(){
-                context.unbindService(this);
+            private void unBind() {
+                if (isServiceRunning(context,SmallDownloadService.class.getName()))context.unbindService(this);
 
             }
         };
         Intent bindIntent = new Intent(context, SmallDownloadService.class);
-        context.bindService(bindIntent, connection, BIND_AUTO_CREATE);
+       if (context!=null&&!context.isDestroyed())context.bindService(bindIntent, connection, BIND_AUTO_CREATE);
+    }
 
+
+    public static boolean isServiceRunning(Context mContext, String  serviceName) {
+        boolean isRunning = false;
+        ActivityManager activityManager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningServiceInfo> serviceList = activityManager.getRunningServices(30);
+        if (!(serviceList.size()>0)) return false;
+        for (int i=0; i<serviceList.size(); i++) {
+            if (serviceList.get(i).service.getClassName().equals(serviceName) == true) {
+                isRunning = true;
+                break;
+            }
+        }
+        return isRunning;
     }
 
 

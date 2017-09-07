@@ -1,18 +1,19 @@
 package com.smallcake.okhttp;
 
-import android.app.Activity;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.smallcake.okhttp.callback.DownloadCallback;
+
 import org.jetbrains.annotations.NotNull;
 
 /**
  * MyApplication --  com.smallcake.okhttp
  * Created by Small Cake on  2017/8/30 14:13.
- * 小小下载服务
+ * download service just small
  */
 
 public class SmallDownloadService extends Service {
@@ -42,17 +43,12 @@ public class SmallDownloadService extends Service {
 
     public class MyBinder extends Binder {
 
-        public void startDownload(final Activity context,@NotNull final String downUrl, final String savePath, final String saveFileName, final DownloadListener listener) {
+        public void startDownload(@NotNull final String downUrl,final DownloadCallback callback) {
 
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    if (context==null){
-                        SmallOkHttp.download(downUrl,savePath,saveFileName, listener);
-                    }else{
-                        SmallOkHttp.downloadUI(context,downUrl,savePath,saveFileName, listener);
-                    }
-
+                    SmallOkHttp.download(downUrl, callback);
                 }
             }).start();
 
