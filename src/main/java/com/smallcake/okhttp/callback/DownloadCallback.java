@@ -14,6 +14,7 @@ import okhttp3.Response;
 /**
  * MyApplication --  com.smallcake.okhttp.callback
  * Created by Small Cake on  2017/9/7 11:38.
+ *
  */
 
 public abstract class DownloadCallback implements Callback {
