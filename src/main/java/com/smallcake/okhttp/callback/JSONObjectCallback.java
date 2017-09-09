@@ -15,18 +15,21 @@ import okhttp3.Response;
  */
 
 public abstract class JSONObjectCallback implements Callback {
-    public abstract void onResponse(Call call, JSONObject jsonObject);
     @Override
     public void onFailure(Call call, IOException e) {
-
+        onFail(e);
     }
 
     @Override
     public void onResponse(Call call, Response response) throws IOException {
-        try {
-            onResponse(call,new JSONObject(response.body().string()));
-        } catch (JSONException e) {
-            e.printStackTrace();
+        if (response.isSuccessful()) {
+            try {
+                onSuccess(new JSONObject(response.body().string()));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
     }
+    public abstract void onFail(IOException e);
+    public abstract void onSuccess(JSONObject jsonObject)throws JSONException;
 }

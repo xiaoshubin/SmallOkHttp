@@ -8,7 +8,6 @@ import android.util.Log;
 
 import com.smallcake.okhttp.callback.DownloadCallback;
 
-import org.jetbrains.annotations.NotNull;
 
 /**
  * MyApplication --  com.smallcake.okhttp
@@ -43,7 +42,7 @@ public class SmallDownloadService extends Service {
 
     public class MyBinder extends Binder {
 
-        public void startDownload(@NotNull final String downUrl,final DownloadCallback callback) {
+        public void startDownload(final String downUrl,final DownloadCallback callback) {
 
             new Thread(new Runnable() {
                 @Override

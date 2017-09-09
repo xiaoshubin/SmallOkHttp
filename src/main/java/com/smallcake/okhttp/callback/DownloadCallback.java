@@ -38,10 +38,7 @@ public abstract class DownloadCallback implements Callback {
     public abstract void onStart(long totalSize);//file total size
     public abstract void onProgress(int percentage,long currentSize);//%，current size
     public abstract void onSuccessed(String successPath,String successFileName);//success
-    @Override
-    public void onFailure(Call call, IOException e) {
 
-    }
 
     @Override
     public void onResponse(Call call, Response response) throws IOException {
