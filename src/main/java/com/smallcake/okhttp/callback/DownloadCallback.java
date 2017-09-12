@@ -20,7 +20,8 @@ import okhttp3.Response;
 public abstract class DownloadCallback implements Callback {
     String DOWNLOAD_PATH = Environment.getExternalStorageDirectory()
             +File.separator
-            +Environment.DIRECTORY_DOWNLOADS;//default download path
+            +Environment.DIRECTORY_DOWNLOADS
+            +File.separator;//default download path
 
     String downUrl;
     String savePath;

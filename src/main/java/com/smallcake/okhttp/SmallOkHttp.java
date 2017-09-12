@@ -41,6 +41,13 @@ import static android.content.Context.BIND_AUTO_CREATE;
 
 
 /**
+ *  compile 'com.squareup.okhttp3:okhttp:3.8.1'
+    compile 'com.squareup.okio:okio:1.13.0'
+    compile 'com.squareup.okhttp3:logging-interceptor:3.4.1'
+    compile 'com.facebook.stetho:stetho-okhttp3:1.4.2'
+ *
+ *
+ *
  * MyApplication --  com.smallcake.okhttp
  * Created by Small Cake on  2017/8/25 10:42.
  * base com.squareup.okhttp3:okhttp，
@@ -314,7 +321,9 @@ public class SmallOkHttp{
             }
         };
         Intent bindIntent = new Intent(context, SmallDownloadService.class);
-       if (context!=null&&!context.isDestroyed())context.bindService(bindIntent, connection, BIND_AUTO_CREATE);
+       if (context!=null)context.bindService(bindIntent, connection, BIND_AUTO_CREATE);
+
+
     }
 
 
