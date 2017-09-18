@@ -6,8 +6,6 @@ import android.util.Log;
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.toolbox.HurlStack;
-import com.facebook.stetho.Stetho;
-import com.facebook.stetho.okhttp3.StethoInterceptor;
 import com.smallcake.okhttp.SmallOkHttp;
 
 import org.apache.http.HttpEntity;
@@ -24,7 +22,6 @@ import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import okhttp3.Cache;
 import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -33,7 +30,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 import okhttp3.internal.Util;
-import okhttp3.logging.HttpLoggingInterceptor;
 
 /**
  * MyApplication --  com.smallcake.okhttp.callback
@@ -51,26 +47,7 @@ public class OkHttpStack extends HurlStack {
     private static OkHttpClient okHttpClient;
 
     public OkHttpStack(Context context) {
-        OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                .cache(new Cache(context.getCacheDir(), MAX_CACHE_SIZE))
-                .readTimeout(READ_TIME_OUT, TimeUnit.MILLISECONDS)
-                .writeTimeout(WRITE_TIME_OUT, TimeUnit.MILLISECONDS)
-                .connectTimeout(CONNECT_TIME_OUT, TimeUnit.MILLISECONDS);
-
-        boolean debug = (Boolean) getBuildConfigValue(context, "DEBUG");
-        if (debug) {
-            HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
-            interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-            builder.addInterceptor(interceptor);
-            /**
-             * FaceBook network debug，can  on Chrome Brower debug ， look SharePreferences,sqlite data ...
-             * method:input [chrome://inspect/] into Chrome Brower
-             * but need take init [Stetho.initializeWithDefaults(this)] on yours MyApplication
-             */
-            builder.addNetworkInterceptor(new StethoInterceptor());
-            Stetho.initializeWithDefaults(context);
-        }
-        okHttpClient = builder.build();
+        okHttpClient = SmallOkHttp.createOkHttpClient(context);
     }
 
     /**

@@ -56,10 +56,10 @@ import static android.content.Context.BIND_AUTO_CREATE;
  */
 
 public class SmallOkHttp{
-    long MAX_CACHE_SIZE = 10*1024*1024;//max cache default 10M
-    int CONNECT_TIME_OUT = 20*1000;//connect time out
-    int READ_TIME_OUT = 20*1000;//read time out
-    int WRITE_TIME_OUT = 20*1000;//write time out
+     private static long MAX_CACHE_SIZE = 10*1024*1024;//max cache default 10M
+    private static int CONNECT_TIME_OUT = 20*1000;//connect time out
+    private static int READ_TIME_OUT = 20*1000;//read time out
+    private static int WRITE_TIME_OUT = 20*1000;//write time out
 
     private static volatile SmallOkHttp mInstance;
     private static OkHttpClient okHttpClient;
@@ -79,6 +79,10 @@ public class SmallOkHttp{
      * @param context
      */
     private SmallOkHttp(Application context) {
+        createOkHttpClient(context);
+    }
+
+    public static OkHttpClient createOkHttpClient(Context context) {
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .cache(new Cache(context.getCacheDir(), MAX_CACHE_SIZE))
                 .readTimeout(READ_TIME_OUT, TimeUnit.MILLISECONDS)
@@ -99,7 +103,7 @@ public class SmallOkHttp{
             Stetho.initializeWithDefaults(context);
         }
         okHttpClient = builder.build();
-
+        return okHttpClient;
     }
 
     /**
@@ -108,7 +112,7 @@ public class SmallOkHttp{
      * @param fieldName
      * @return
      */
-    private  Object getBuildConfigValue(Context context, String fieldName) {
+    private static Object getBuildConfigValue(Context context, String fieldName) {
         try {
             Class<?> clazz = Class.forName(context.getPackageName() + ".BuildConfig");
             Field field = clazz.getField(fieldName);

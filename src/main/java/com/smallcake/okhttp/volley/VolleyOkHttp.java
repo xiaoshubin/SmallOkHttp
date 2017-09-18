@@ -17,8 +17,16 @@ import okhttp3.OkHttpClient;
 import static com.android.volley.Request.Method.GET;
 
 /**
+ * compile 'com.squareup.okhttp3:okhttp:3.8.1'
+ compile 'com.squareup.okio:okio:1.13.0'
+ compile 'com.squareup.okhttp3:logging-interceptor:3.4.1'
+ compile 'com.facebook.stetho:stetho-okhttp3:1.4.2'
+ compile 'com.android.volley:volley:1.0.0'
+ compile 'org.apache.httpcomponents:httpcore:4.4.6'
+ *
  * MyApplication --  com.smallcake.okhttp
  * Created by Small Cake on  2017/9/11 10:09.
+ *
  */
 
 public class VolleyOkHttp {
