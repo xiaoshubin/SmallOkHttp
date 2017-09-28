@@ -63,7 +63,7 @@ public class SmallOkHttp{
 
     private static volatile SmallOkHttp mInstance;
     private static OkHttpClient okHttpClient;
-
+    static boolean debug = true;
     /**
      * CONSTRUCT 1
      * set yours OkHttpClient
@@ -89,7 +89,6 @@ public class SmallOkHttp{
                 .writeTimeout(WRITE_TIME_OUT, TimeUnit.MILLISECONDS)
                 .connectTimeout(CONNECT_TIME_OUT, TimeUnit.MILLISECONDS);
 
-        boolean debug = (Boolean) getBuildConfigValue(context, "DEBUG");
         if (debug) {
             HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
             interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
@@ -104,6 +103,10 @@ public class SmallOkHttp{
         }
         okHttpClient = builder.build();
         return okHttpClient;
+    }
+
+    public static void setDebug(boolean debug) {
+        SmallOkHttp.debug = debug;
     }
 
     /**

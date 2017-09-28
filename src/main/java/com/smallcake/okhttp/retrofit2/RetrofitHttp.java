@@ -24,6 +24,10 @@ public class RetrofitHttp{
          okHttpClient = SmallOkHttp.createOkHttpClient(context);
         setRetrofit(defaultHost);
     }
+    public static void init( String defaultHost, OkHttpClient client){
+         okHttpClient = client;
+        setRetrofit(defaultHost);
+    }
 
     private static void setRetrofit(String defaultHost) {
         retrofit = new Retrofit.Builder()
