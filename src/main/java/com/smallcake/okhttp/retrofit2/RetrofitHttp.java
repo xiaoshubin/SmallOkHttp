@@ -43,6 +43,7 @@ public class RetrofitHttp{
      * @return
      */
     public static Retrofit getRetrofit() {
+
         if (retrofit==null) throw new NullPointerException("RetrofitHttp must be init");
         return retrofit;
     }

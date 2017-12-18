@@ -11,11 +11,15 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.text.TextUtils;
+import android.util.Log;
 
 import com.facebook.stetho.Stetho;
 import com.facebook.stetho.okhttp3.StethoInterceptor;
 import com.smallcake.okhttp.callback.DownloadCallback;
 import com.smallcake.okhttp.callback.UploadCallback;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -87,7 +91,9 @@ public class SmallOkHttp{
                 .cache(new Cache(context.getCacheDir(), MAX_CACHE_SIZE))
                 .readTimeout(READ_TIME_OUT, TimeUnit.MILLISECONDS)
                 .writeTimeout(WRITE_TIME_OUT, TimeUnit.MILLISECONDS)
-                .connectTimeout(CONNECT_TIME_OUT, TimeUnit.MILLISECONDS);
+                .connectTimeout(CONNECT_TIME_OUT, TimeUnit.MILLISECONDS)
+                .retryOnConnectionFailure(true)//断线重连
+                ;
 
         if (debug) {
             HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
@@ -222,6 +228,8 @@ public class SmallOkHttp{
 
     }
 
+
+
     /**
      * 【DOWNLOAD】
      * DOWNLOAD WITH SERVICE ,DATA BACK ON UI
@@ -234,8 +242,11 @@ public class SmallOkHttp{
      * @param saveFileName
      * @param callback
      */
-    public static void downloadUIWithService(final Activity context, final String downUrl, final String savePath, final String saveFileName, final DownloadCallback callback) {
-
+    public static void downloadUIWithService(final Activity context, @NotNull final String downUrl, final String savePath, final String saveFileName, final DownloadCallback callback) {
+        if (TextUtils.isEmpty(downUrl)){
+            Log.e("SmallOkHttp--downloadUIWithService>>","downUrl is null");
+            return;
+        }
         final  Handler mHandler  = new Handler(){
             @Override
             public void handleMessage(Message msg) {
@@ -373,6 +384,11 @@ public class SmallOkHttp{
         });
         Request request = new Request.Builder().url(url).post(body).build();
         getOkHttpClient().newCall(request).enqueue(callback);
+    }
+
+    public static void upFile(String url, RequestBody body, Callback callBack) {
+        Request request = new Request.Builder().url(url).post(body).build();
+        getOkHttpClient().newCall(request).enqueue(callBack);
     }
 
 
