@@ -18,8 +18,6 @@ public class RetrofitHttp{
     private static OkHttpClient okHttpClient;
     private static Retrofit retrofit;
 
-
-
     public static void init(Application context,String defaultHost){
          okHttpClient = SmallOkHttp.createOkHttpClient(context);
         setRetrofit(defaultHost);
@@ -43,7 +41,6 @@ public class RetrofitHttp{
      * @return
      */
     public static Retrofit getRetrofit() {
-
         if (retrofit==null) throw new NullPointerException("RetrofitHttp must be init");
         return retrofit;
     }
