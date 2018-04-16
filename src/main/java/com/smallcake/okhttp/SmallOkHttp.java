@@ -60,7 +60,7 @@ import static android.content.Context.BIND_AUTO_CREATE;
  */
 
 public class SmallOkHttp{
-     private static long MAX_CACHE_SIZE = 10*1024*1024;//max cache default 10M
+    private static long MAX_CACHE_SIZE = 10*1024*1024;//max cache default 10M
     private static int CONNECT_TIME_OUT = 20*1000;//connect time out
     private static int READ_TIME_OUT = 20*1000;//read time out
     private static int WRITE_TIME_OUT = 20*1000;//write time out
@@ -91,9 +91,7 @@ public class SmallOkHttp{
                 .cache(new Cache(context.getCacheDir(), MAX_CACHE_SIZE))
                 .readTimeout(READ_TIME_OUT, TimeUnit.MILLISECONDS)
                 .writeTimeout(WRITE_TIME_OUT, TimeUnit.MILLISECONDS)
-                .connectTimeout(CONNECT_TIME_OUT, TimeUnit.MILLISECONDS)
-                .retryOnConnectionFailure(true)//断线重连
-                ;
+                .connectTimeout(CONNECT_TIME_OUT, TimeUnit.MILLISECONDS);
 
         if (debug) {
             HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
