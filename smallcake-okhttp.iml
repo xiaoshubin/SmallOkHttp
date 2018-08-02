@@ -97,6 +97,7 @@
     <orderEntry type="library" exported="" name="httpcore-4.4.6" level="project" />
     <orderEntry type="library" exported="" name="commons-cli-1.2" level="project" />
     <orderEntry type="library" exported="" name="stetho-1.4.2" level="project" />
+    <orderEntry type="library" exported="" name="progressmanager-1.5.0" level="project" />
     <orderEntry type="library" exported="" name="okhttp-3.9.0" level="project" />
     <orderEntry type="library" exported="" name="volley-1.0.0" level="project" />
     <orderEntry type="library" exported="" name="rxandroid-2.0.1" level="project" />

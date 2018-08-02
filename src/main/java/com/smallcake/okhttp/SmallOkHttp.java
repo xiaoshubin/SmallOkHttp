@@ -30,6 +30,9 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 
+import me.jessyan.progressmanager.ProgressListener;
+import me.jessyan.progressmanager.ProgressManager;
+import me.jessyan.progressmanager.body.ProgressInfo;
 import okhttp3.Cache;
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -88,10 +91,14 @@ public class SmallOkHttp{
 
     public static OkHttpClient createOkHttpClient(Context context) {
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                .sslSocketFactory(SSLSocketClient.getSSLSocketFactory())
+                .hostnameVerifier(SSLSocketClient.getHostnameVerifier())
                 .cache(new Cache(context.getCacheDir(), MAX_CACHE_SIZE))
                 .readTimeout(READ_TIME_OUT, TimeUnit.MILLISECONDS)
                 .writeTimeout(WRITE_TIME_OUT, TimeUnit.MILLISECONDS)
                 .connectTimeout(CONNECT_TIME_OUT, TimeUnit.MILLISECONDS);
+
+
 
         if (debug) {
             HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
@@ -105,7 +112,9 @@ public class SmallOkHttp{
             builder.addNetworkInterceptor(new StethoInterceptor());
             Stetho.initializeWithDefaults(context);
         }
-        okHttpClient = builder.build();
+        okHttpClient = ProgressManager.getInstance().with(builder).build();
+
+//        okHttpClient = builder.build();
         return okHttpClient;
     }
 
@@ -259,7 +268,7 @@ public class SmallOkHttp{
                         Bundle data1 = msg.getData();
                         int percentage = data1.getInt("percentage");
                         long currentSize = data1.getLong("currentSize");
-                        callback.onProgress(percentage,currentSize);
+//                        callback.onProgress(percentage,currentSize);
                         break;
                     case 2:
                         Bundle data2 = msg.getData();
@@ -271,6 +280,20 @@ public class SmallOkHttp{
                 }
             }
         };
+
+        ProgressManager.getInstance().addResponseListener(downUrl, new ProgressListener() {
+            @Override
+            public void onProgress(ProgressInfo progressInfo) {
+                long total = progressInfo.getContentLength();
+                long sum = progressInfo.getCurrentbytes();
+                int progress = (int) (sum * 1.0f / total * 100);
+                callback.onProgress(progress,sum);
+            }
+
+            @Override
+            public void onError(long l, Exception e) {
+            }
+        });
         ServiceConnection connection = new ServiceConnection() {
             @Override
             public void onServiceDisconnected(ComponentName name) {
