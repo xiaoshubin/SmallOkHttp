@@ -109,7 +109,13 @@ public class DownloadUtils {
 
                 } catch (Exception e) {
                     Log.e("下载异常", e.getMessage());
-                    listener.onDownloadFailed();
+                    // 下载失败
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            listener.onDownloadFailed();
+                        }
+                    });
                 } finally {
                     try {
                         if (is != null) is.close();
