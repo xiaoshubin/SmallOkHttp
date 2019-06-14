@@ -34,8 +34,6 @@ public abstract class DownloadCallback implements Callback {
         this.downUrl = downUrl;
         this.savePath = savePath;
         this.saveFileName = saveFileName;
-
-
     }
 
     public abstract void onStart(long totalSize);//file total size
@@ -68,6 +66,4 @@ public abstract class DownloadCallback implements Callback {
     private String getDownloadFileName(String url) {
         return url.substring(url.lastIndexOf("/") + 1, url.length());
     }
-
-
 }

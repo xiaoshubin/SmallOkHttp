@@ -14,16 +14,18 @@ import retrofit2.converter.gson.GsonConverterFactory;
  * Created by Small Cake on  2017/9/13 9:37.
  */
 
-public class RetrofitHttp{
+public class RetrofitHttp {
     private static OkHttpClient okHttpClient;
     private static Retrofit retrofit;
-
-    public static void init(Application context,String defaultHost){
+    private static String baseHost;
+    public static void init(Application context, String defaultHost){
          okHttpClient = SmallOkHttp.createOkHttpClient(context);
+        baseHost = defaultHost;
         setRetrofit(defaultHost);
     }
     public static void init( String defaultHost, OkHttpClient client){
          okHttpClient = client;
+        baseHost =defaultHost;
         setRetrofit(defaultHost);
     }
 
@@ -32,7 +34,6 @@ public class RetrofitHttp{
                         .baseUrl(defaultHost)
                         .client(okHttpClient)
                         .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-                        .addConverterFactory(JSONObjectConverterFactory.create())
                         .addConverterFactory(GsonConverterFactory.create()).build();
     }
 
@@ -40,10 +41,15 @@ public class RetrofitHttp{
      * 使用init初始化里面的host
      * @return
      */
-    public static Retrofit getRetrofit() {
+    private static Retrofit getRetrofit() {
         if (retrofit==null) throw new NullPointerException("RetrofitHttp must be init");
         return retrofit;
     }
+    public static  <T> T create(final Class<T> service) {
+        return getRetrofit().create(service);
+    }
+
+
 
     /**
      * 因为有的应用也可能有其他的host
@@ -51,10 +57,33 @@ public class RetrofitHttp{
      * @return
      */
     public static Retrofit getRetrofit(String host) {
-        if (retrofit==null) throw new NullPointerException("RetrofitHttp must be init");
-        setRetrofit(host);
-        return retrofit;
+        return new Retrofit.Builder()
+                .baseUrl(host)
+                .client(okHttpClient)
+                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+                .addConverterFactory(GsonConverterFactory.create()).build();
     }
+
+    public static final class Builder {
+        String defaultHost = baseHost;
+        OkHttpClient okHttpClient = RetrofitHttp.okHttpClient;
+        public Builder host( String host) {
+            defaultHost = host;
+            return this;
+        }
+        public Builder okHttpClient(OkHttpClient okClient) {
+            okHttpClient = okClient;
+            return this;
+        }
+        public Retrofit build() {
+            return new Retrofit.Builder()
+                    .baseUrl(defaultHost)
+                    .client(okHttpClient)
+                    .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+                    .addConverterFactory(GsonConverterFactory.create()).build();
+        }
+    }
+
 
 
 }

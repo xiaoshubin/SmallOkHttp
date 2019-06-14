@@ -1,28 +1,16 @@
 package com.smallcake.okhttp;
 
-import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.Application;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Message;
-import android.text.TextUtils;
-import android.util.Log;
 
 import com.facebook.stetho.Stetho;
 import com.facebook.stetho.okhttp3.StethoInterceptor;
 import com.smallcake.okhttp.callback.DownloadCallback;
 import com.smallcake.okhttp.callback.UploadCallback;
-
-import org.jetbrains.annotations.NotNull;
+import com.smallcake.okhttp.interceptor.LoggingInterceptor;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
@@ -30,11 +18,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 
-import me.jessyan.progressmanager.ProgressListener;
-import me.jessyan.progressmanager.ProgressManager;
-import me.jessyan.progressmanager.body.ProgressInfo;
 import okhttp3.Cache;
-import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
 import okhttp3.MediaType;
@@ -42,9 +26,6 @@ import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.logging.HttpLoggingInterceptor;
-
-import static android.content.Context.BIND_AUTO_CREATE;
 
 
 /**
@@ -91,18 +72,17 @@ public class SmallOkHttp{
 
     public static OkHttpClient createOkHttpClient(Context context) {
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
-                .sslSocketFactory(SSLSocketClient.getSSLSocketFactory())
-                .hostnameVerifier(SSLSocketClient.getHostnameVerifier())
                 .cache(new Cache(context.getCacheDir(), MAX_CACHE_SIZE))
                 .readTimeout(READ_TIME_OUT, TimeUnit.MILLISECONDS)
                 .writeTimeout(WRITE_TIME_OUT, TimeUnit.MILLISECONDS)
                 .connectTimeout(CONNECT_TIME_OUT, TimeUnit.MILLISECONDS);
 
-
-
         if (debug) {
-            HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
-            interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+//            HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
+//            interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+//            builder.addInterceptor(interceptor);
+
+            LoggingInterceptor interceptor = new LoggingInterceptor();
             builder.addInterceptor(interceptor);
             /**
              * FaceBook network debug，can  on Chrome Brower debug ， look SharePreferences,sqlite data ...
@@ -112,9 +92,7 @@ public class SmallOkHttp{
             builder.addNetworkInterceptor(new StethoInterceptor());
             Stetho.initializeWithDefaults(context);
         }
-        okHttpClient = ProgressManager.getInstance().with(builder).build();
-
-//        okHttpClient = builder.build();
+        okHttpClient = builder.build();
         return okHttpClient;
     }
 
@@ -237,133 +215,119 @@ public class SmallOkHttp{
 
 
 
-    /**
-     * 【DOWNLOAD】
-     * DOWNLOAD WITH SERVICE ,DATA BACK ON UI
-     * download callback on UI threed
-     * download end unbind service auto
-     * download some file < 100M
-     * @param context
-     * @param downUrl
-     * @param savePath
-     * @param saveFileName
-     * @param callback
-     */
-    public static void downloadUIWithService(final Activity context, @NotNull final String downUrl, final String savePath, final String saveFileName, final DownloadCallback callback) {
-        if (TextUtils.isEmpty(downUrl)){
-            Log.e("SmallOkHttp--downloadUIWithService>>","downUrl is null");
-            return;
-        }
-        final  Handler mHandler  = new Handler(){
-            @Override
-            public void handleMessage(Message msg) {
-                super.handleMessage(msg);
-                switch (msg.what){
-                    case 0:
-                        Bundle data = msg.getData();
-                        long totalSize = data.getLong("totalSize");
-                        callback.onStart(totalSize);
-                        break;
-                    case 1:
-                        Bundle data1 = msg.getData();
-                        int percentage = data1.getInt("percentage");
-                        long currentSize = data1.getLong("currentSize");
+//    /**
+//     * 【DOWNLOAD】
+//     * DOWNLOAD WITH SERVICE ,DATA BACK ON UI
+//     * download callback on UI threed
+//     * download end unbind service auto
+//     * download some file < 100M
+//     * @param context
+//     * @param downUrl
+//     * @param savePath
+//     * @param saveFileName
+//     * @param callback
+//     */
+//    public static void downloadUIWithService(final Activity context, @NotNull final String downUrl, final String savePath, final String saveFileName, final DownloadCallback callback) {
+//        if (TextUtils.isEmpty(downUrl)){
+//            Log.e("SmallOkHttp--downloadUIWithService>>","downUrl is null");
+//            return;
+//        }
+//        final  Handler mHandler  = new Handler(){
+//            @Override
+//            public void handleMessage(Message msg) {
+//                super.handleMessage(msg);
+//                switch (msg.what){
+//                    case 0:
+//                        Bundle data = msg.getData();
+//                        long totalSize = data.getLong("totalSize");
+//                        callback.onStart(totalSize);
+//                        break;
+//                    case 1:
+//                        Bundle data1 = msg.getData();
+//                        int percentage = data1.getInt("percentage");
+//                        long currentSize = data1.getLong("currentSize");
 //                        callback.onProgress(percentage,currentSize);
-                        break;
-                    case 2:
-                        Bundle data2 = msg.getData();
-                        String successPath = data2.getString("successPath");
-                        String successFileName = data2.getString("successFileName");
-                        callback.onSuccessed(successPath,successFileName);
-                        break;
-
-                }
-            }
-        };
-
-        ProgressManager.getInstance().addResponseListener(downUrl, new ProgressListener() {
-            @Override
-            public void onProgress(ProgressInfo progressInfo) {
-                long total = progressInfo.getContentLength();
-                long sum = progressInfo.getCurrentbytes();
-                int progress = (int) (sum * 1.0f / total * 100);
-                callback.onProgress(progress,sum);
-            }
-
-            @Override
-            public void onError(long l, Exception e) {
-            }
-        });
-        ServiceConnection connection = new ServiceConnection() {
-            @Override
-            public void onServiceDisconnected(ComponentName name) {
-            }
-
-            @Override
-            public void onServiceConnected(ComponentName name, IBinder service) {
-
-                SmallDownloadService.MyBinder mBinder = (SmallDownloadService.MyBinder) service;
-                mBinder.startDownload(downUrl, new DownloadCallback(downUrl,savePath,saveFileName) {
-                    int progress;
-                    @Override
-                    public void onStart(long totalSize) {
-                        progress = 0;
-                        Message message = Message.obtain();
-                        message.what = 0;
-                        Bundle bundle = new Bundle();
-                        bundle.putLong("totalSize",totalSize);
-                        message.setData(bundle);
-                        mHandler.sendMessage(message);
-
-                    }
-
-                    @Override
-                    public void onProgress(int percentage, long currentSize) {
-                        if (progress!=percentage){
-                            progress = percentage;
-                            Message message = Message.obtain();
-                            message.what = 1;
-                            Bundle bundle = new Bundle();
-                            bundle.putInt("percentage",percentage);
-                            bundle.putLong("currentSize",currentSize);
-                            message.setData(bundle);
-                            mHandler.sendMessage(message);
-                        }
-
-                    }
-
-                    @Override
-                    public void onSuccessed(String successPath, String successFileName) {
-                        Message message = Message.obtain();
-                        message.what = 2;
-                        Bundle bundle = new Bundle();
-                        bundle.putString("successPath",successPath);
-                        bundle.putString("successFileName",successFileName);
-                        message.setData(bundle);
-                        mHandler.sendMessage(message);
-                        unBind();
-
-                    }
-
-                    @Override
-                    public void onFailure(Call call, IOException e) {
-                        call.cancel();
-                        e.printStackTrace();
-                        unBind();
-                    }
-                });
-            }
-
-            private void unBind() {
-                if (isServiceRunning(context,SmallDownloadService.class.getName()))context.unbindService(this);
-
-            }
-        };
-        Intent bindIntent = new Intent(context, SmallDownloadService.class);
-       if (context!=null)context.bindService(bindIntent, connection, BIND_AUTO_CREATE);
-
-
-    }
+//                        break;
+//                    case 2:
+//                        Bundle data2 = msg.getData();
+//                        String successPath = data2.getString("successPath");
+//                        String successFileName = data2.getString("successFileName");
+//                        callback.onSuccessed(successPath,successFileName);
+//                        break;
+//
+//                }
+//            }
+//        };
+//        ServiceConnection connection = new ServiceConnection() {
+//            @Override
+//            public void onServiceDisconnected(ComponentName name) {
+//            }
+//
+//            @Override
+//            public void onServiceConnected(ComponentName name, IBinder service) {
+//
+//                SmallDownloadService.MyBinder mBinder = (SmallDownloadService.MyBinder) service;
+//                mBinder.startDownload(downUrl, new DownloadCallback(downUrl,savePath,saveFileName) {
+//                    int progress;
+//                    @Override
+//                    public void onStart(long totalSize) {
+//                        progress = 0;
+//                        Message message = Message.obtain();
+//                        message.what = 0;
+//                        Bundle bundle = new Bundle();
+//                        bundle.putLong("totalSize",totalSize);
+//                        message.setData(bundle);
+//                        mHandler.sendMessage(message);
+//
+//                    }
+//
+//                    @Override
+//                    public void onProgress(int percentage, long currentSize) {
+//                        if (progress!=percentage){
+//                            progress = percentage;
+//                            Message message = Message.obtain();
+//                            message.what = 1;
+//                            Bundle bundle = new Bundle();
+//                            bundle.putInt("percentage",percentage);
+//                            bundle.putLong("currentSize",currentSize);
+//                            message.setData(bundle);
+//                            mHandler.sendMessage(message);
+//                        }
+//
+//                    }
+//
+//                    @Override
+//                    public void onSuccessed(String successPath, String successFileName) {
+//                        Message message = Message.obtain();
+//                        message.what = 2;
+//                        Bundle bundle = new Bundle();
+//                        bundle.putString("successPath",successPath);
+//                        bundle.putString("successFileName",successFileName);
+//                        message.setData(bundle);
+//                        mHandler.sendMessage(message);
+//                        unBind();
+//
+//                    }
+//
+//                    @Override
+//                    public void onFailure(Call call, IOException e) {
+//                        call.cancel();
+//                        e.printStackTrace();
+//                        unBind();
+//                    }
+//                });
+//            }
+//
+//            private void unBind() {
+//                if (isServiceRunning(context,SmallDownloadService.class.getName()))context.unbindService(this);
+//
+//            }
+//        };
+//        Intent bindIntent = new Intent(context, SmallDownloadService.class);
+//       if (context!=null)context.bindService(bindIntent, connection, BIND_AUTO_CREATE);
+//
+//
+//    }
 
 
     private static boolean isServiceRunning(Context mContext, String  serviceName) {
